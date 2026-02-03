@@ -59,8 +59,3 @@ target_link_libraries(mpt-crypto
 # --- Testing ---
 enable_testing()
 add_subdirectory(tests)
-
-# --- Utility Tool ---
-add_executable(confidential_utility tools/confidential_utility.cpp)
-target_include_directories(confidential_utility PUBLIC include)
-target_link_libraries(confidential_utility PUBLIC mpt-crypto)
