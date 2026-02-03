@@ -1,57 +1,65 @@
-add_executable(test_elgamal test_elgamal.c)
+# Enable CTest
+enable_testing()
 
-# Link the test against our library and its dependencies
-target_link_libraries(test_elgamal PRIVATE mpt-crypto)
+# --------------------------------------------------------------------
+# Helper function for defining MPT tests
+#   - add_executable
+#   - target_link_libraries
+#   - add_test
+#
+# Usage:
+#   add_mpt_test(test_name source.c lib1 lib2 ...)
+# --------------------------------------------------------------------
+function(add_mpt_test TEST_NAME TEST_SOURCE)
+    add_executable(${TEST_NAME} ${TEST_SOURCE})
+    target_link_libraries(${TEST_NAME} PRIVATE ${ARGN})
+    add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
+endfunction()
 
-# Add the test to CTest
-add_test(NAME ElGamalTests COMMAND test_elgamal)
+# --------------------------------------------------------------------
+# Test definitions
+# --------------------------------------------------------------------
 
-# Add the Equality Proof tests
-add_executable(test_equality_proof test_equality_proof.c)
-target_link_libraries(test_equality_proof PRIVATE mpt-crypto)
-add_test(NAME EqualityProofTests COMMAND test_equality_proof)
+add_mpt_test(test_elgamal
+        test_elgamal.c
+        mpt-crypto)
 
-# Add the Same Plaintext Proof tests
-add_executable(test_same_plaintext test_same_plaintext.c)
-target_link_libraries(test_same_plaintext PRIVATE mpt-crypto)
-add_test(NAME SamePlaintextProofTests COMMAND test_same_plaintext)
+add_mpt_test(test_equality_proof
+        test_equality_proof.c
+        mpt-crypto)
 
-# Add the new Multi-Same-Plaintext Proof tests
-add_executable(test_same_plaintext_multi test_same_plaintext_multi.c)
-target_link_libraries(test_same_plaintext_multi PRIVATE mpt-crypto)
-add_test(NAME SamePlaintextMultiTests COMMAND test_same_plaintext_multi)
+add_mpt_test(test_same_plaintext
+        test_same_plaintext.c
+        mpt-crypto)
 
-# Add the test executable
-add_executable(test_link_proof tests test_link_proof.c)
-target_link_libraries(test_link_proof mpt-crypto secp256k1 OpenSSL::Crypto)
-add_test(NAME LinkProofTests COMMAND test_link_proof)
+add_mpt_test(test_same_plaintext_multi
+        test_same_plaintext_multi.c
+        mpt-crypto)
 
-# ElGamal Reveal Verification (The one we just wrote)
-add_executable(test_elgamal_verify tests test_elgamal_verify.c)
-target_link_libraries(test_elgamal_verify mpt-crypto secp256k1 mpt-crypto)
-add_test(NAME ElGamalRevealVerify COMMAND test_elgamal_verify)
+add_mpt_test(test_link_proof
+        test_link_proof.c
+        mpt-crypto secp256k1 OpenSSL::Crypto)
 
-# Proof of knowledge of secret key
-add_executable(test_pok_sk tests test_pok_sk.c)
-target_link_libraries(test_pok_sk mpt-crypto secp256k1 mpt-crypto)
-add_test(NAME POK_SK COMMAND test_pok_sk)
+add_mpt_test(test_elgamal_verify
+        test_elgamal_verify.c
+        mpt-crypto secp256k1)
 
-# The Pedersen Commitment tests
-add_executable(test_commitments test_commitments.c)
-target_link_libraries(test_commitments PRIVATE mpt-crypto secp256k1 mpt-crypto)
-add_test(NAME PedersenCommitmentTests COMMAND test_commitments)
+add_mpt_test(test_pok_sk
+        test_pok_sk.c
+        mpt-crypto secp256k1)
 
-# Add the IPA standalone test
-add_executable(test_ipa tests test_ipa.c)
-target_link_libraries(test_ipa PRIVATE mpt-crypto secp256k1 mpt-crypto)
-add_test(NAME test_ipa COMMAND test_ipa)
+add_mpt_test(test_commitments
+        test_commitments.c
+        mpt-crypto secp256k1)
 
-# Add the new test executable
-add_executable(test_same_plaintext_multi_shared_r tests test_same_plaintext_multi_shared_r.c)
-target_link_libraries(test_same_plaintext_multi_shared_r mpt-crypto secp256k1)
-add_test(NAME SamePlaintextMultiSharedR COMMAND test_same_plaintext_multi_shared_r)
+add_mpt_test(test_ipa
+        test_ipa.c
+        mpt-crypto secp256k1)
 
-# Bulletproof Aggregation
-add_executable(test_bulletproof_agg test_bulletproof_agg.c)
-target_link_libraries(test_bulletproof_agg PRIVATE mpt-crypto secp256k1)
-add_test(NAME BulletproofAggregationTests COMMAND test_bulletproof_agg)
+add_mpt_test(test_same_plaintext_multi_shared_r
+        test_same_plaintext_multi_shared_r.c
+        mpt-crypto secp256k1)
+
+add_mpt_test(test_bulletproof_agg
+        test_bulletproof_agg.c
+        mpt-crypto secp256k1)
