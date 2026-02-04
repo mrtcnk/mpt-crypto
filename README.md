@@ -33,74 +33,59 @@ Before building, ensure you have the following installed:
 
 - **CMake** (version 3.10 or higher)
 - **C Compiler** (GCC, Clang, or AppleClang)
-- **OpenSSL 3.x** (development headers and libraries)
 
 On macOS with Homebrew:
 
 ```bash
-brew install cmake openssl@3
+brew install cmake
 ```
 
 On Ubuntu/Debian:
 
 ```bash
-sudo apt-get install cmake libssl-dev build-essential
+sudo apt-get install cmake build-essential
 ```
 
 ### Dependency Setup
 
-This library requires `libsecp256k1` as a sibling directory. Clone it from the bitcoin-core repository:
-
-```bash
-# From the parent directory of mpt-crypto
-cd ..
-git clone https://github.com/bitcoin-core/secp256k1.git
-```
-
-Your directory structure should look like:
-
-```text
-Projects/
-├── mpt-crypto/
-└── secp256k1/
-```
+Set up Conan using [xrpld's BUILD.md](https://github.com/XRPLF/rippled/blob/develop/BUILD.md#steps)
 
 ### Build Instructions
 
-1. **Create the build directory and configure:**
+Run following commands to build the library
+
+1. Create build directory:
 
    ```bash
-   cd mpt-crypto
-   mkdir -p build && cd build
-   cmake ..
+   mkdir build && cd build
    ```
 
-2. **Build the library and tests:**
+2. Buld dependencies:
 
    ```bash
-   make -j
+   conan install .. --build=missing -o "&:with_tests=True"
    ```
 
-#### Platform-Specific Notes
+3. Run CMake:
 
-**macOS (Apple Silicon):** If you encounter architecture mismatch errors with OpenSSL, explicitly set the architecture:
+   ```bash
+   cmake .. \
+      -DCMAKE_BUILD_TYPE=Release \
+      -G Ninja \
+      -DCMAKE_TOOLCHAIN_FILE:FILEPATH=build/generators/conan_toolchain.cmake
+   ```
 
-```bash
-cmake -DCMAKE_OSX_ARCHITECTURES=arm64 ..
-```
+4. **Build the library and tests:**
 
-**macOS (Intel):** Use `x86_64` instead:
-
-```bash
-cmake -DCMAKE_OSX_ARCHITECTURES=x86_64 ..
-```
+   ```bash
+   ninja
+   ```
 
 ### Running Tests
 
-After building, run the test suite using CTest:
+After building, run the test suite using CTest from the build directory:
 
 ```bash
-cd build
 ctest --output-on-failure
 ```
 
