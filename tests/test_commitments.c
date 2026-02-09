@@ -5,8 +5,6 @@
 #include <openssl/rand.h>
 
 /* --- Macro: Persistent Assertion --- */
-/* This macro works in both Debug and Release modes.
-   It guarantees the condition code is executed and checks the result. */
 #define EXPECT(condition) do { \
     if (!(condition)) { \
         fprintf(stderr, "TEST FAILED: %s at line %d\n", #condition, __LINE__); \

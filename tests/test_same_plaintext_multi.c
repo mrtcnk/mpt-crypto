@@ -6,7 +6,6 @@
 #include "secp256k1_mpt.h"
 
 /* --- Macro: Persistent Assertion --- */
-/* Ensures checks run in both Debug and Release modes */
 #define EXPECT(condition) do { \
     if (!(condition)) { \
         fprintf(stderr, "TEST FAILED: %s at line %d\n", #condition, __LINE__); \

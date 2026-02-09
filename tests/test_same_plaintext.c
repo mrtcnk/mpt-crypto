@@ -6,7 +6,7 @@
 #include <openssl/rand.h>
 #include "secp256k1_mpt.h"
 
-/* IMPROVED MACRO: Robust error checking that works in Release mode */
+/* --- Macro: Persistent Assertion --- */
 #define EXPECT(cond, msg) do { \
     if (!(cond)) { \
         fprintf(stderr, "CRITICAL FAILURE: %s\nFile: %s, Line: %d\nCode: %s\n", \

@@ -15,8 +15,7 @@
 /* ---- Benchmark parameters ---- */
 #define VERIFY_RUNS 5
 
-/* ---- Safety Macro for Release Mode ---- */
-/* This ensures checks run even when NDEBUG is defined (Release builds) */
+/* --- Macro: Persistent Assertion --- */
 #define EXPECT(cond, msg) do { \
     if (!(cond)) { \
         fprintf(stderr, "CRITICAL FAILURE: %s\nFile: %s, Line: %d\nCode: %s\n", \
