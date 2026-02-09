@@ -36,15 +36,8 @@
 #include <string.h>
 #include <openssl/crypto.h>
 
-/* 1. Backend Configuration Definitions */
-#ifndef USE_SCALAR_8X32
-#define USE_SCALAR_8X32
-#endif
-#ifndef USE_FIELD_10X26
-#define USE_FIELD_10X26
-#endif
 
-/* 2. Include low-level utilities first.
+/* Include low-level utilities first.
       On ARM64/Apple Silicon, the scalar math depends on 128-bit
       integer helpers defined in these headers. */
 #include <private/util.h>
