@@ -4,27 +4,19 @@
 #include <time.h>
 #include <secp256k1.h>
 #include "secp256k1_mpt.h"
-
-/* Robust error checking that works in Release mode */
-#define EXPECT(cond, msg) do { \
-    if (!(cond)) { \
-        fprintf(stderr, "CRITICAL FAILURE: %s\nFile: %s, Line: %d\nCode: %s\n", \
-        msg, __FILE__, __LINE__, #cond); \
-        exit(EXIT_FAILURE); \
-    } \
-} while(0)
+#include "test_utils.h"
 
 int main() {
     secp256k1_context *ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
-    EXPECT(ctx != NULL, "Failed to create secp256k1 context");
+    EXPECT(ctx != NULL);
 
     unsigned char seed[32];
     FILE *fr = fopen("/dev/urandom", "r");
-    EXPECT(fr != NULL, "Failed to open /dev/urandom");
-    EXPECT(fread(seed, 1, 32, fr) == 32, "Failed to read random seed");
+    EXPECT(fr != NULL);
+    EXPECT(fread(seed, 1, 32, fr) == 32);
     fclose(fr);
 
-    EXPECT(secp256k1_context_randomize(ctx, seed), "Context randomization failed");
+    EXPECT(secp256k1_context_randomize(ctx, seed));
 
     printf("=== Running Test: Proof of Equality (Shared Randomness) ===\n");
 
@@ -50,11 +42,11 @@ int main() {
             }
         }
     }
-    EXPECT(valid_scalar, "Failed to generate valid random scalar 'r'");
+    EXPECT(valid_scalar);
 
     // Generate random tx context bytes
     // FIX: Pass &dummy_pk instead of NULL
-    EXPECT(secp256k1_elgamal_generate_keypair(ctx, tx_context, &dummy_pk), "Failed to generate tx context");
+    EXPECT(secp256k1_elgamal_generate_keypair(ctx, tx_context, &dummy_pk));
 
     // 2. Generate Recipient Keys & Encrypt
     secp256k1_pubkey pks[3];
@@ -62,11 +54,11 @@ int main() {
     secp256k1_pubkey C1; // Shared C1
 
     // Pre-calculate Shared C1: C1 = r*G
-    EXPECT(secp256k1_ec_pubkey_create(ctx, &C1, r), "Failed to create shared C1 commitment");
+    EXPECT(secp256k1_ec_pubkey_create(ctx, &C1, r));
 
     for (int i = 0; i < N_RECIPIENTS; i++) {
         unsigned char sk[32];
-        EXPECT(secp256k1_elgamal_generate_keypair(ctx, sk, &pks[i]), "Failed to generate recipient keypair");
+        EXPECT(secp256k1_elgamal_generate_keypair(ctx, sk, &pks[i]));
 
         // Manually constructing ciphertexts to match the shared 'r' structure:
         // C2[i] = amount*G + r*PK[i]
@@ -76,17 +68,17 @@ int main() {
         unsigned char m_scalar[32] = {0};
         for(int b=0; b<8; b++) m_scalar[31-b] = (amount >> (b*8)) & 0xFF;
 
-        EXPECT(secp256k1_ec_pubkey_create(ctx, &mG, m_scalar), "Failed to create amount commitment mG");
+        EXPECT(secp256k1_ec_pubkey_create(ctx, &mG, m_scalar));
 
         // b. Calculate r*PK[i]
         secp256k1_pubkey rPK = pks[i]; // start with copy of PK
-        EXPECT(secp256k1_ec_pubkey_tweak_mul(ctx, &rPK, r), "Failed to compute r*PK (tweak mul)");
+        EXPECT(secp256k1_ec_pubkey_tweak_mul(ctx, &rPK, r));
 
         // c. Add them: C2 = mG + rPK
         const secp256k1_pubkey *summands[2];
         summands[0] = &mG;
         summands[1] = &rPK;
-        EXPECT(secp256k1_ec_pubkey_combine(ctx, &C2s[i], summands, 2), "Failed to combine mG + rPK");
+        EXPECT(secp256k1_ec_pubkey_combine(ctx, &C2s[i], summands, 2));
     }
 
     // 3. Generate Proof
@@ -104,7 +96,7 @@ int main() {
             tx_context
     );
 
-    EXPECT(res == 1, "Proof Generation Function returned failure");
+    EXPECT(res == 1);
     printf("Proof generated successfully.\n");
 
     // 4. Verify Proof
@@ -117,7 +109,7 @@ int main() {
             tx_context
     );
 
-    EXPECT(res == 1, "Proof Verification Function returned failure");
+    EXPECT(res == 1);
     printf("Proof verified successfully.\n");
 
     printf("Test passed!\n");

@@ -4,14 +4,7 @@
 #include <secp256k1.h>
 #include <openssl/rand.h>
 #include "secp256k1_mpt.h"
-
-/* --- Macro: Persistent Assertion --- */
-#define EXPECT(condition) do { \
-    if (!(condition)) { \
-        fprintf(stderr, "TEST FAILED: %s at line %d\n", #condition, __LINE__); \
-        abort(); \
-    } \
-} while(0)
+#include "test_utils.h"
 
 // Helper: Generates 32 random bytes (e.g., for randomness or tx_context_id)
 // Now returns void and uses EXPECT internally to enforce success.

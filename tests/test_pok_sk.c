@@ -4,14 +4,7 @@
 #include "secp256k1_mpt.h"
 #include <secp256k1.h>
 #include <openssl/rand.h>
-
-/* --- Macro: Persistent Assertion --- */
-#define EXPECT(condition) do { \
-    if (!(condition)) { \
-        fprintf(stderr, "TEST FAILED: %s at line %d\n", #condition, __LINE__); \
-        abort(); \
-    } \
-} while(0)
+#include "test_utils.h"
 
 /* --- Helper: Safe Random Scalar Generation --- */
 static void random_scalar(const secp256k1_context* ctx, unsigned char* out) {

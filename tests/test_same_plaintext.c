@@ -5,15 +5,7 @@
 #include <secp256k1.h>
 #include <openssl/rand.h>
 #include "secp256k1_mpt.h"
-
-/* --- Macro: Persistent Assertion --- */
-#define EXPECT(cond, msg) do { \
-    if (!(cond)) { \
-        fprintf(stderr, "CRITICAL FAILURE: %s\nFile: %s, Line: %d\nCode: %s\n", \
-        msg, __FILE__, __LINE__, #cond); \
-        exit(EXIT_FAILURE); \
-    } \
-} while(0)
+#include "test_utils.h"
 
 /* Helper to dump pubkey bytes for debugging */
 static void dump_pubkey_raw(const char* name, const secp256k1_pubkey* pk) {
@@ -56,15 +48,15 @@ static void test_same_plaintext_valid(const secp256k1_context* ctx) {
     printf("Running test: same plaintext proof (valid case)...\n");
 
     // 1. Setup: Generate keys and randomness
-    EXPECT(secp256k1_elgamal_generate_keypair(ctx, priv_1, &pub_1) == 1, "Failed to generate keypair 1");
-    EXPECT(secp256k1_elgamal_generate_keypair(ctx, priv_2, &pub_2) == 1, "Failed to generate keypair 2");
-    EXPECT(get_random_scalar(ctx, r1) == 1, "Failed to generate r1");
-    EXPECT(get_random_scalar(ctx, r2) == 1, "Failed to generate r2");
-    EXPECT(get_random_scalar(ctx, tx_context_id) == 1, "Failed to generate tx context");
+    EXPECT(secp256k1_elgamal_generate_keypair(ctx, priv_1, &pub_1) == 1);
+    EXPECT(secp256k1_elgamal_generate_keypair(ctx, priv_2, &pub_2) == 1);
+    EXPECT(get_random_scalar(ctx, r1) == 1);
+    EXPECT(get_random_scalar(ctx, r2) == 1);
+    EXPECT(get_random_scalar(ctx, tx_context_id) == 1);
 
     // 2. Encrypt the same amount
-    EXPECT(secp256k1_elgamal_encrypt(ctx, &R1, &S1, &pub_1, amount_m, r1) == 1, "Encryption 1 failed");
-    EXPECT(secp256k1_elgamal_encrypt(ctx, &R2, &S2, &pub_2, amount_m, r2) == 1, "Encryption 2 failed");
+    EXPECT(secp256k1_elgamal_encrypt(ctx, &R1, &S1, &pub_1, amount_m, r1) == 1);
+    EXPECT(secp256k1_elgamal_encrypt(ctx, &R2, &S2, &pub_2, amount_m, r2) == 1);
 
     printf("Generating proof...\n");
     // 3. Generate the proof
@@ -73,7 +65,7 @@ static void test_same_plaintext_valid(const secp256k1_context* ctx) {
             &R1, &S1, &pub_1,
             &R2, &S2, &pub_2,
             amount_m, r1, r2, tx_context_id
-    ) == 1, "Proof generation failed");
+    ) == 1);
 
     printf("Verifying proof...\n");
     // 4. Verify the proof
@@ -82,7 +74,7 @@ static void test_same_plaintext_valid(const secp256k1_context* ctx) {
             &R1, &S1, &pub_1,
             &R2, &S2, &pub_2,
             tx_context_id
-    ) == 1, "Proof verification failed");
+    ) == 1);
 
     printf("Test passed!\n");
 }
@@ -101,18 +93,18 @@ static void test_same_plaintext_tampered_proof(const secp256k1_context* ctx) {
 
     printf("Running test: same plaintext proof (tampered proof)...\n");
 
-    EXPECT(secp256k1_elgamal_generate_keypair(ctx, priv_1, &pub_1) == 1, "Setup failed");
-    EXPECT(secp256k1_elgamal_generate_keypair(ctx, priv_2, &pub_2) == 1, "Setup failed");
-    EXPECT(get_random_scalar(ctx, r1) == 1, "Setup failed");
-    EXPECT(get_random_scalar(ctx, r2) == 1, "Setup failed");
-    EXPECT(get_random_scalar(ctx, tx_context_id) == 1, "Setup failed");
+    EXPECT(secp256k1_elgamal_generate_keypair(ctx, priv_1, &pub_1) == 1);
+    EXPECT(secp256k1_elgamal_generate_keypair(ctx, priv_2, &pub_2) == 1);
+    EXPECT(get_random_scalar(ctx, r1) == 1);
+    EXPECT(get_random_scalar(ctx, r2) == 1);
+    EXPECT(get_random_scalar(ctx, tx_context_id) == 1);
 
-    EXPECT(secp256k1_elgamal_encrypt(ctx, &R1, &S1, &pub_1, amount_m, r1) == 1, "Encryption failed");
-    EXPECT(secp256k1_elgamal_encrypt(ctx, &R2, &S2, &pub_2, amount_m, r2) == 1, "Encryption failed");
+    EXPECT(secp256k1_elgamal_encrypt(ctx, &R1, &S1, &pub_1, amount_m, r1) == 1);
+    EXPECT(secp256k1_elgamal_encrypt(ctx, &R2, &S2, &pub_2, amount_m, r2) == 1);
 
     EXPECT(secp256k1_mpt_prove_same_plaintext(
             ctx, proof, &R1, &S1, &pub_1, &R2, &S2, &pub_2,
-            amount_m, r1, r2, tx_context_id) == 1, "Proof gen failed");
+            amount_m, r1, r2, tx_context_id) == 1);
 
     // Tamper with the proof
     proof[42] ^= 0x01;
@@ -121,7 +113,7 @@ static void test_same_plaintext_tampered_proof(const secp256k1_context* ctx) {
     int result = secp256k1_mpt_verify_same_plaintext(
             ctx, proof, &R1, &S1, &pub_1, &R2, &S2, &pub_2, tx_context_id);
 
-    EXPECT(result == 0, "Tampered proof was ACCEPTED! (Expected failure)");
+    EXPECT(result == 0);
 
     printf("Test passed!\n");
 }
@@ -143,38 +135,38 @@ static void test_same_plaintext_wrong_ciphertext(const secp256k1_context* ctx) {
 
     printf("Running test: same plaintext proof (wrong ciphertext)...\n");
 
-    EXPECT(secp256k1_elgamal_generate_keypair(ctx, priv_1, &pub_1) == 1, "Setup failed");
-    EXPECT(secp256k1_elgamal_generate_keypair(ctx, priv_2, &pub_2) == 1, "Setup failed");
-    EXPECT(get_random_scalar(ctx, r1) == 1, "Setup failed");
-    EXPECT(get_random_scalar(ctx, r2) == 1, "Setup failed");
-    EXPECT(get_random_scalar(ctx, r3) == 1, "Setup failed");
-    EXPECT(get_random_scalar(ctx, tx_context_id) == 1, "Setup failed");
+    EXPECT(secp256k1_elgamal_generate_keypair(ctx, priv_1, &pub_1) == 1);
+    EXPECT(secp256k1_elgamal_generate_keypair(ctx, priv_2, &pub_2) == 1);
+    EXPECT(get_random_scalar(ctx, r1) == 1);
+    EXPECT(get_random_scalar(ctx, r2) == 1);
+    EXPECT(get_random_scalar(ctx, r3) == 1);
+    EXPECT(get_random_scalar(ctx, tx_context_id) == 1);
 
-    EXPECT(secp256k1_elgamal_encrypt(ctx, &R1, &S1, &pub_1, amount_m1, r1) == 1, "Encryption failed");
-    EXPECT(secp256k1_elgamal_encrypt(ctx, &R2, &S2, &pub_2, amount_m1, r2) == 1, "Encryption failed");
-    EXPECT(secp256k1_elgamal_encrypt(ctx, &R3, &S3, &pub_2, amount_m2, r3) == 1, "Encryption failed");
+    EXPECT(secp256k1_elgamal_encrypt(ctx, &R1, &S1, &pub_1, amount_m1, r1) == 1);
+    EXPECT(secp256k1_elgamal_encrypt(ctx, &R2, &S2, &pub_2, amount_m1, r2) == 1);
+    EXPECT(secp256k1_elgamal_encrypt(ctx, &R3, &S3, &pub_2, amount_m2, r3) == 1);
 
     // Generate valid proof for m1
     EXPECT(secp256k1_mpt_prove_same_plaintext(
             ctx, proof, &R1, &S1, &pub_1, &R2, &S2, &pub_2,
-            amount_m1, r1, r2, tx_context_id) == 1, "Proof gen failed");
+            amount_m1, r1, r2, tx_context_id) == 1);
 
     // Verify against R3/S3 (which is m2) - Should fail
     int result = secp256k1_mpt_verify_same_plaintext(
             ctx, proof, &R1, &S1, &pub_1, &R3, &S3, &pub_2, tx_context_id);
 
-    EXPECT(result == 0, "Wrong ciphertext was ACCEPTED! (Expected failure)");
+    EXPECT(result == 0);
 
     printf("Test passed!\n");
 }
 
 int main() {
     secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
-    EXPECT(ctx != NULL, "Failed to create context");
+    EXPECT(ctx != NULL);
 
     unsigned char seed[32];
-    EXPECT(RAND_bytes(seed, sizeof(seed)) == 1, "RAND_bytes failed");
-    EXPECT(secp256k1_context_randomize(ctx, seed) == 1, "Context randomization failed");
+    EXPECT(RAND_bytes(seed, sizeof(seed)) == 1);
+    EXPECT(secp256k1_context_randomize(ctx, seed) == 1);
 
     test_same_plaintext_valid(ctx);
     test_same_plaintext_tampered_proof(ctx);

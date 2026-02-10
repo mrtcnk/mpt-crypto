@@ -44,7 +44,7 @@
 #include <private/int128.h>
 #include <private/int128_impl.h>
 
-/* 3. Include the actual scalar implementations */
+/* Include the actual scalar implementations */
 #include <private/scalar.h>
 #include <private/scalar_impl.h>
 

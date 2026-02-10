@@ -5,18 +5,11 @@
 #include <openssl/rand.h>
 #include <openssl/sha.h>
 #include "secp256k1_mpt.h"
+#include "test_utils.h"
 
 #define N_BITS 64
 /* log2(64) = 6 rounds */
 #define IPA_ROUNDS 6
-
-/* --- Macro: Persistent Assertion --- */
-#define EXPECT(condition) do { \
-    if (!(condition)) { \
-        fprintf(stderr, "TEST FAILED: %s at line %d\n", #condition, __LINE__); \
-        abort(); \
-    } \
-} while(0)
 
 /* ---- Helper Macros ---- */
 static int scalar_is_zero(const unsigned char s[32]) {

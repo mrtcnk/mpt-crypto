@@ -1,16 +1,9 @@
 #include <stdio.h>
 #include <string.h>
-#include <stdlib.h> // Required for abort()
+#include <stdlib.h>
 #include "secp256k1_mpt.h"
 #include <openssl/rand.h>
-
-/* --- Macro: Persistent Assertion --- */
-#define EXPECT(condition) do { \
-    if (!(condition)) { \
-        fprintf(stderr, "TEST FAILED: %s at line %d\n", #condition, __LINE__); \
-        abort(); \
-    } \
-} while(0)
+#include "test_utils.h"
 
 /* --- Helper: Safe Random Scalar Generation --- */
 /* Ensures the random bytes form a valid curve scalar (0 < scalar < order) */

@@ -6,6 +6,7 @@
 #include <secp256k1.h>
 
 #include "secp256k1_mpt.h"
+#include "test_utils.h"
 
 /* ---- Aggregation parameters ---- */
 #define M 2
@@ -15,14 +16,6 @@
 /* ---- Benchmark parameters ---- */
 #define VERIFY_RUNS 5
 
-/* --- Macro: Persistent Assertion --- */
-#define EXPECT(cond, msg) do { \
-    if (!(cond)) { \
-        fprintf(stderr, "CRITICAL FAILURE: %s\nFile: %s, Line: %d\nCode: %s\n", \
-        msg, __FILE__, __LINE__, #cond); \
-        exit(EXIT_FAILURE); \
-    } \
-} while(0)
 
 /* ---- Helpers ---- */
 
@@ -50,7 +43,7 @@ int main(void) {
     /* ---- Context ---- */
     secp256k1_context* ctx =
             secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
-    EXPECT(ctx != NULL, "Failed to create context");
+    EXPECT(ctx != NULL);
 
     /* ---- Values ---- */
     uint64_t values[M] = { 5000, 123456 };
@@ -59,11 +52,11 @@ int main(void) {
 
     /* ---- Context Binding ---- */
     unsigned char context_id[32];
-    EXPECT(RAND_bytes(context_id, 32) == 1, "Failed to generate context_id");
+    EXPECT(RAND_bytes(context_id, 32) == 1);
 
     secp256k1_pubkey pk_base;
     /* Use the standard H generator from the library */
-    EXPECT(secp256k1_mpt_get_h_generator(ctx, &pk_base), "Failed to get H generator");
+    EXPECT(secp256k1_mpt_get_h_generator(ctx, &pk_base));
 
     /* ---- Commitments ---- */
     for (size_t i = 0; i < M; i++) {
@@ -73,19 +66,19 @@ int main(void) {
                 &commitments[i],
                 values[i],
                 blindings[i],
-                &pk_base), "Failed to create commitment");
+                &pk_base));
     }
 
     /* ---- Generator vectors ---- */
     const size_t n = BP_TOTAL_BITS(M);
     secp256k1_pubkey* G_vec = malloc(n * sizeof(secp256k1_pubkey));
     secp256k1_pubkey* H_vec = malloc(n * sizeof(secp256k1_pubkey));
-    EXPECT(G_vec && H_vec, "Malloc failed");
+    EXPECT(G_vec && H_vec);
 
     EXPECT(secp256k1_mpt_get_generator_vector(
-            ctx, G_vec, n, (const unsigned char*)"G", 1), "Failed to get G vector");
+            ctx, G_vec, n, (const unsigned char*)"G", 1));
     EXPECT(secp256k1_mpt_get_generator_vector(
-            ctx, H_vec, n, (const unsigned char*)"H", 1), "Failed to get H vector");
+            ctx, H_vec, n, (const unsigned char*)"H", 1));
 
     /* ---- Prove (timed) ---- */
     unsigned char proof[4096];
@@ -105,7 +98,7 @@ int main(void) {
             (const unsigned char*)blindings,
             M,
             &pk_base,
-            context_id), "Proving failed");
+            context_id));
 
     clock_gettime(CLOCK_MONOTONIC, &t_p_end);
 
@@ -132,7 +125,7 @@ int main(void) {
 
     clock_gettime(CLOCK_MONOTONIC, &t_v_end);
 
-    EXPECT(ok, "Verification failed (single run)");
+    EXPECT(ok);
 
     printf("PASSED\n");
     printf("[BENCH] Verification time (single): %.3f ms\n",
@@ -158,7 +151,7 @@ int main(void) {
 
         clock_gettime(CLOCK_MONOTONIC, &te);
 
-        EXPECT(ok, "Verification failed during benchmark");
+        EXPECT(ok);
         total_ms += elapsed_ms(ts, te);
     }
 
@@ -178,9 +171,9 @@ int main(void) {
     EXPECT(secp256k1_bulletproof_create_commitment(
             ctx,
             &bad_commitments[1],
-            values[1] + 1,
+            values[M - 1] + 1,
             bad_blinding,
-            &pk_base), "Failed to create bad commitment");
+            &pk_base));
 
     ok = secp256k1_bulletproof_verify_agg(
             ctx,

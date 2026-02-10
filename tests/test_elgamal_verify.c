@@ -4,14 +4,7 @@
 #include <secp256k1.h>
 #include "secp256k1_mpt.h"
 #include <openssl/rand.h>
-
-/* --- Macro: Persistent Assertion --- */
-#define EXPECT(condition) do { \
-    if (!(condition)) { \
-        fprintf(stderr, "TEST FAILED: %s at line %d\n", #condition, __LINE__); \
-        abort(); \
-    } \
-} while(0)
+#include "test_utils.h"
 
 void test_elgamal_verify_encryption() {
     // 1. Setup Context

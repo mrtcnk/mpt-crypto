@@ -1,20 +1,21 @@
 cmake_minimum_required(VERSION 3.16)
 project(mpt-crypto C CXX)
 
-# --- 1. Global Architecture Detection ---
+# --- Global Architecture Detection ---
 include(CheckTypeSize)
 check_type_size("unsigned __int128" HAVE_INT128_T)
 
+# Store definitions in a variable
 if (HAVE_INT128_T OR CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64"
     OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
-    message(STATUS "Build: Detected 64-bit system. Enforcing 64-bit arithmetic globally.")
-    add_compile_definitions(USE_SCALAR_4X64 USE_FIELD_5X52 HAVE___INT128)
+    message(STATUS "Build: Detected 64-bit system. Enforcing 64-bit arithmetic.")
+    set(MPT_ARCH_DEFS USE_SCALAR_4X64 USE_FIELD_5X52 HAVE___INT128)
 else ()
-    message(STATUS "Build: Detected 32-bit system. Enforcing generic arithmetic globally.")
-    add_compile_definitions(USE_SCALAR_8X32 USE_FIELD_10X26)
+    message(STATUS "Build: Detected 32-bit system. Enforcing generic arithmetic.")
+    set(MPT_ARCH_DEFS USE_SCALAR_8X32 USE_FIELD_10X26)
 endif ()
 
-# --- Find Dependencies (Maintainer's Way) ---
+# --- Find Dependencies ---
 find_package(OpenSSL REQUIRED)
 find_package(secp256k1 REQUIRED)
 
@@ -35,7 +36,7 @@ add_library(mpt-crypto
 target_include_directories(mpt-crypto PUBLIC include)
 
 # --- Set Compile Definitions ---
-target_compile_definitions(mpt-crypto PRIVATE ECMULT_WINDOW_SIZE=15 ECMULT_GEN_PREC_BITS=4)
+target_compile_definitions(mpt-crypto PRIVATE ECMULT_WINDOW_SIZE=15 ECMULT_GEN_PREC_BITS=4 PUBLIC ${MPT_ARCH_DEFS})
 
 # --- Link Dependencies ---
 target_link_libraries(mpt-crypto PUBLIC secp256k1::secp256k1 PUBLIC OpenSSL::Crypto)
