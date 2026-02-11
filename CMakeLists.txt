@@ -1,19 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(mpt-crypto C CXX)
 
-# --- Global Architecture Detection ---
-include(CheckTypeSize)
-# Check if the compiler supports __int128 (required for the optimized 64-bit code)
-check_type_size("__int128" HAVE___INT128)
-
-if (HAVE___INT128)
-    message(STATUS "Build: Detected 128-bit integer support.")
-    set(MPT_ARCH_DEFS SECP256K1_WIDEMUL_INT128)
-else ()
-    message(STATUS "Build: No 128-bit support detected.")
-    set(MPT_ARCH_DEFS SECP256K1_WIDEMUL_INT64)
-endif ()
-
 # --- Find Dependencies ---
 find_package(OpenSSL REQUIRED)
 find_package(secp256k1 REQUIRED)
@@ -35,11 +22,20 @@ add_library(mpt-crypto
 target_include_directories(mpt-crypto PUBLIC include)
 
 # --- Set Compile Definitions ---
-# Pass the architecture flags (MPT_ARCH_DEFS) to the compiler
-target_compile_definitions(mpt-crypto PUBLIC ${MPT_ARCH_DEFS})
+include(CheckTypeSize)
+# Check if the compiler supports __int128 (required for the optimized 64-bit code)
+check_type_size("__int128" HAVE___INT128)
+
+if (HAVE___INT128)
+    message(STATUS "Build: Detected 128-bit integer support.")
+    target_compile_definitions(mpt-crypto PRIVATE SECP256K1_WIDEMUL_INT128)
+else ()
+    message(STATUS "Build: No 128-bit support detected.")
+    target_compile_definitions(mpt-crypto PRIVATE SECP256K1_WIDEMUL_INT64)
+endif ()
 
 # --- Link Dependencies ---
-target_link_libraries(mpt-crypto PUBLIC secp256k1::secp256k1 PUBLIC OpenSSL::Crypto)
+target_link_libraries(mpt-crypto PUBLIC secp256k1::secp256k1 OpenSSL::Crypto)
 
 # --- Testing ---
 option(ENABLE_TESTS "Enable building tests" ON)
