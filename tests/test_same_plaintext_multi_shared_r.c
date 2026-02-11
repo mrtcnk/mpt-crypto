@@ -57,7 +57,8 @@ int main(void) {
     }
 
     // 4. Generate Proof
-    unsigned char proof[1024];
+    size_t proof_len = secp256k1_mpt_proof_equality_shared_r_size(N_RECIPIENTS);
+    unsigned char proof[proof_len];
 
     int res = secp256k1_mpt_prove_equality_shared_r(
             ctx, proof,
