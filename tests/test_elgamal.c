@@ -1,8 +1,7 @@
 #include <stdio.h>
-#include <stdlib.h> // Required for abort()
+#include <stdlib.h>
 #include <string.h>
 #include <secp256k1.h>
-#include <openssl/rand.h>
 #include "secp256k1_mpt.h"
 #include "test_utils.h"
 

@@ -2,21 +2,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include "secp256k1_mpt.h"
-#include <openssl/rand.h>
 #include "test_utils.h"
 
-/* --- Helper: Safe Random Scalar Generation --- */
-/* Ensures the random bytes form a valid curve scalar (0 < scalar < order) */
-static void random_scalar(const secp256k1_context* ctx, unsigned char* out) {
-    int ret;
-    do {
-        ret = RAND_bytes(out, 32);
-        EXPECT(ret == 1); // Crash if RNG fails
-    } while (!secp256k1_ec_seckey_verify(ctx, out)); // Retry if scalar is invalid (>= curve order)
-}
-
 /* --- Tests --- */
-
 void test_pedersen_commitment_basic() {
     secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
 

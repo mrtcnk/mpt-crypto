@@ -3,6 +3,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <openssl/sha.h>
+#include <openssl/rand.h>
+#include <secp256k1.h>
+
 
 /* --- Macro: Persistent Assertion --- */
 /* Ensures checks run in both Debug and Release modes */
@@ -13,4 +17,15 @@
     } \
 } while(0)
 
+/* Helper: Generate 32 raw random bytes (for seeds, IDs, etc.) */
+static inline void random_bytes(unsigned char* out) {
+    EXPECT(RAND_bytes(out, 32) == 1);
+}
+
+/* Helper: Generate a valid random scalar using OpenSSL RNG. */
+static inline void random_scalar(const secp256k1_context* ctx, unsigned char* out) {
+    do {
+        EXPECT(RAND_bytes(out, 32) == 1);
+    } while (!secp256k1_ec_seckey_verify(ctx, out));
+}
 #endif // MPT_TEST_UTILS_H

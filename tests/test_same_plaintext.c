@@ -1,36 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <string.h>
 #include <secp256k1.h>
-#include <openssl/rand.h>
 #include "secp256k1_mpt.h"
 #include "test_utils.h"
-
-/* Helper to dump pubkey bytes for debugging */
-static void dump_pubkey_raw(const char* name, const secp256k1_pubkey* pk) {
-    const unsigned char* p = (const unsigned char*)pk;
-    printf("%s raw: ", name);
-    for (size_t i = 0; i < sizeof(*pk); i++) printf("%02x", p[i]);
-    printf("\n");
-}
-
-/* Helper to get a random 32-byte scalar */
-static int get_random_scalar(const secp256k1_context* ctx, unsigned char* scalar) {
-    secp256k1_pubkey temp_pubkey;
-    int ret = secp256k1_elgamal_generate_keypair(ctx, scalar, &temp_pubkey);
-
-    // Safety check: ensure we didn't get all zeros
-    if (ret) {
-        int is_zero = 1;
-        for(int i=0; i<32; i++) if(scalar[i] != 0) is_zero = 0;
-        if(is_zero) {
-            fprintf(stderr, "CRITICAL: get_random_scalar produced ALL ZEROS!\n");
-            return 0;
-        }
-    }
-    return ret;
-}
 
 /**
  * Test 1: Valid proof generation and verification.
@@ -50,9 +23,11 @@ static void test_same_plaintext_valid(const secp256k1_context* ctx) {
     // 1. Setup: Generate keys and randomness
     EXPECT(secp256k1_elgamal_generate_keypair(ctx, priv_1, &pub_1) == 1);
     EXPECT(secp256k1_elgamal_generate_keypair(ctx, priv_2, &pub_2) == 1);
-    EXPECT(get_random_scalar(ctx, r1) == 1);
-    EXPECT(get_random_scalar(ctx, r2) == 1);
-    EXPECT(get_random_scalar(ctx, tx_context_id) == 1);
+
+    // Use standardized helper (handles errors internally)
+    random_scalar(ctx, r1);
+    random_scalar(ctx, r2);
+    random_scalar(ctx, tx_context_id);
 
     // 2. Encrypt the same amount
     EXPECT(secp256k1_elgamal_encrypt(ctx, &R1, &S1, &pub_1, amount_m, r1) == 1);
@@ -95,9 +70,10 @@ static void test_same_plaintext_tampered_proof(const secp256k1_context* ctx) {
 
     EXPECT(secp256k1_elgamal_generate_keypair(ctx, priv_1, &pub_1) == 1);
     EXPECT(secp256k1_elgamal_generate_keypair(ctx, priv_2, &pub_2) == 1);
-    EXPECT(get_random_scalar(ctx, r1) == 1);
-    EXPECT(get_random_scalar(ctx, r2) == 1);
-    EXPECT(get_random_scalar(ctx, tx_context_id) == 1);
+
+    random_scalar(ctx, r1);
+    random_scalar(ctx, r2);
+    random_scalar(ctx, tx_context_id);
 
     EXPECT(secp256k1_elgamal_encrypt(ctx, &R1, &S1, &pub_1, amount_m, r1) == 1);
     EXPECT(secp256k1_elgamal_encrypt(ctx, &R2, &S2, &pub_2, amount_m, r2) == 1);
@@ -137,10 +113,11 @@ static void test_same_plaintext_wrong_ciphertext(const secp256k1_context* ctx) {
 
     EXPECT(secp256k1_elgamal_generate_keypair(ctx, priv_1, &pub_1) == 1);
     EXPECT(secp256k1_elgamal_generate_keypair(ctx, priv_2, &pub_2) == 1);
-    EXPECT(get_random_scalar(ctx, r1) == 1);
-    EXPECT(get_random_scalar(ctx, r2) == 1);
-    EXPECT(get_random_scalar(ctx, r3) == 1);
-    EXPECT(get_random_scalar(ctx, tx_context_id) == 1);
+
+    random_scalar(ctx, r1);
+    random_scalar(ctx, r2);
+    random_scalar(ctx, r3);
+    random_scalar(ctx, tx_context_id);
 
     EXPECT(secp256k1_elgamal_encrypt(ctx, &R1, &S1, &pub_1, amount_m1, r1) == 1);
     EXPECT(secp256k1_elgamal_encrypt(ctx, &R2, &S2, &pub_2, amount_m1, r2) == 1);
@@ -160,12 +137,12 @@ static void test_same_plaintext_wrong_ciphertext(const secp256k1_context* ctx) {
     printf("Test passed!\n");
 }
 
-int main() {
+int main(void) {
     secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
     EXPECT(ctx != NULL);
 
     unsigned char seed[32];
-    EXPECT(RAND_bytes(seed, sizeof(seed)) == 1);
+    random_bytes(seed);
     EXPECT(secp256k1_context_randomize(ctx, seed) == 1);
 
     test_same_plaintext_valid(ctx);

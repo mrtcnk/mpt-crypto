@@ -1,9 +1,7 @@
 #include <stdio.h>
-#include <stdlib.h> // Required for abort()
+#include <stdlib.h>
 #include <string.h>
 #include <secp256k1.h>
-#include <openssl/rand.h>
-#include <openssl/sha.h>
 #include "secp256k1_mpt.h"
 #include "test_utils.h"
 
@@ -76,14 +74,6 @@ extern int secp256k1_bulletproof_ipa_dot(
         const unsigned char* b,
         size_t n
 );
-
-/* ---- Test Utils ---- */
-
-static void random_scalar(const secp256k1_context* ctx, unsigned char s[32]) {
-    do {
-        EXPECT(RAND_bytes(s, 32) == 1);
-    } while (!secp256k1_ec_seckey_verify(ctx, s));
-}
 
 static int add_term(
         const secp256k1_context* ctx,

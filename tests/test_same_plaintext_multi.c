@@ -1,19 +1,9 @@
 #include <stdio.h>
 #include <string.h>
-#include <stdlib.h> // For malloc/free/abort
+#include <stdlib.h>
 #include <secp256k1.h>
-#include <openssl/rand.h>
 #include "secp256k1_mpt.h"
 #include "test_utils.h"
-
-/* --- Helper Functions --- */
-
-// Helper: Generates a valid scalar using the library's keypair gen
-// Returns void and crashes on failure for test simplicity
-static void get_random_scalar(const secp256k1_context* ctx, unsigned char* scalar) {
-    secp256k1_pubkey temp_pubkey;
-    EXPECT(secp256k1_elgamal_generate_keypair(ctx, scalar, &temp_pubkey) == 1);
-}
 
 /* --- Test Cases --- */
 
@@ -40,11 +30,11 @@ static void test_valid_multi_proof(const secp256k1_context* ctx, size_t n) {
     size_t i;
 
     // 1. Setup: Keys and Randomness
-    get_random_scalar(ctx, tx_id);
+    random_scalar(ctx, tx_id);
     for (i = 0; i < n; ++i) {
         unsigned char priv[32];
         EXPECT(secp256k1_elgamal_generate_keypair(ctx, priv, &Pk[i]) == 1);
-        get_random_scalar(ctx, &r[i*32]);
+        random_scalar(ctx, &r[i*32]);
     }
 
     // 2. Encrypt the SAME amount N times
@@ -93,11 +83,11 @@ static void test_different_amounts_fail(const secp256k1_context* ctx) {
     uint64_t amount_1 = 100;
     uint64_t amount_2 = 200; // Different!
 
-    get_random_scalar(ctx, tx_id);
+    random_scalar(ctx, tx_id);
     for (int i = 0; i < 2; ++i) {
         unsigned char priv[32];
         EXPECT(secp256k1_elgamal_generate_keypair(ctx, priv, &Pk[i]) == 1);
-        get_random_scalar(ctx, r[i]);
+        random_scalar(ctx, r[i]);
     }
 
     // Encrypt DIFFERENT amounts
@@ -156,11 +146,11 @@ static void test_tampered_proof_fail(const secp256k1_context* ctx) {
     uint64_t amount = 500;
 
     // Setup valid scenario
-    get_random_scalar(ctx, tx_id);
+    random_scalar(ctx, tx_id);
     for(int i=0; i<2; ++i) {
         unsigned char priv[32];
         EXPECT(secp256k1_elgamal_generate_keypair(ctx, priv, &Pk[i]) == 1);
-        get_random_scalar(ctx, &r[i*32]);
+        random_scalar(ctx, &r[i*32]);
         EXPECT(secp256k1_elgamal_encrypt(ctx, &R[i], &S[i], &Pk[i], amount, &r[i*32]) == 1);
     }
 

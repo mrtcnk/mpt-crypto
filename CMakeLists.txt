@@ -11,7 +11,7 @@ if (HAVE___INT128)
     set(MPT_ARCH_DEFS SECP256K1_WIDEMUL_INT128 USE_FIELD_5X52 HAVE___INT128)
 else ()
     message(STATUS "Build: No 128-bit support detected. Using generic 32-bit arithmetic.")
-    set(MPT_ARCH_DEFS USE_SCALAR_8X32 USE_FIELD_10X26)
+    set(MPT_ARCH_DEFS SECP256K1_WIDEMUL_INT64 USE_FIELD_10X26)
 endif ()
 
 # --- Find Dependencies ---

@@ -2,9 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
-#include <openssl/rand.h>
 #include <secp256k1.h>
-
 #include "secp256k1_mpt.h"
 #include "test_utils.h"
 
@@ -22,18 +20,6 @@
 static inline double elapsed_ms(struct timespec a, struct timespec b) {
     return (b.tv_sec - a.tv_sec) * 1000.0 +
            (b.tv_nsec - a.tv_nsec) / 1e6;
-}
-
-static void random_scalar(
-        const secp256k1_context* ctx,
-        unsigned char out[32]
-) {
-    do {
-        if (RAND_bytes(out, 32) != 1) {
-            fprintf(stderr, "RAND_bytes failed\n");
-            exit(1);
-        }
-    } while (!secp256k1_ec_seckey_verify(ctx, out));
 }
 
 /* ---- Main ---- */

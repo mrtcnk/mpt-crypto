@@ -1,17 +1,9 @@
 #include <stdio.h>
 #include <string.h>
-#include <stdlib.h> // Required for abort()
+#include <stdlib.h>
 #include "secp256k1_mpt.h"
 #include <secp256k1.h>
-#include <openssl/rand.h>
 #include "test_utils.h"
-
-/* --- Helper: Safe Random Scalar Generation --- */
-static void random_scalar(const secp256k1_context* ctx, unsigned char* out) {
-    do {
-        EXPECT(RAND_bytes(out, 32) == 1);
-    } while (!secp256k1_ec_seckey_verify(ctx, out));
-}
 
 void test_pok_sk() {
     secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);

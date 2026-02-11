@@ -1,16 +1,10 @@
 #include <stdio.h>
-#include <stdlib.h> // Required for abort()
+#include <stdlib.h>
 #include <string.h>
 #include <secp256k1.h>
-#include <openssl/rand.h>
 #include "secp256k1_mpt.h"
 #include "test_utils.h"
 
-// Helper: Generates 32 random bytes (e.g., for randomness or tx_context_id)
-// Now returns void and uses EXPECT internally to enforce success.
-static void get_random_bytes(unsigned char* buffer32) {
-    EXPECT(RAND_bytes(buffer32, 32) == 1);
-}
 
 // Forward declarations for all test functions
 static void test_equality_proof_valid(const secp256k1_context* ctx);
@@ -25,7 +19,7 @@ int main() {
     EXPECT(ctx != NULL);
 
     unsigned char seed[32];
-    get_random_bytes(seed);
+    random_bytes(seed);
     EXPECT(secp256k1_context_randomize(ctx, seed) == 1);
 
     // Run tests for this module
@@ -55,15 +49,15 @@ static void test_equality_proof_valid(const secp256k1_context* ctx) {
 
     // 1. Setup: Generate keys, randomness, and encrypt
     EXPECT(secp256k1_elgamal_generate_keypair(ctx, privkey, &pubkey) == 1);
-    get_random_bytes(randomness_r);
+    random_bytes(randomness_r);
 
     // Ensure randomness is a valid scalar (needed for proof gen)
     while (secp256k1_ec_seckey_verify(ctx, randomness_r) != 1) {
-        get_random_bytes(randomness_r);
+        random_bytes(randomness_r);
     }
 
     EXPECT(secp256k1_elgamal_encrypt(ctx, &c1, &c2, &pubkey, amount, randomness_r) == 1);
-    get_random_bytes(tx_context_id);
+    random_bytes(tx_context_id);
 
     // 2. Generate the proof
     int prove_result = secp256k1_equality_plaintext_prove(
@@ -93,14 +87,14 @@ static void test_equality_proof_invalid_amount(const secp256k1_context* ctx) {
 
     // 1. Setup: Generate keys, randomness, encrypt correct amount
     EXPECT(secp256k1_elgamal_generate_keypair(ctx, privkey, &pubkey) == 1);
-    get_random_bytes(randomness_r);
+    random_bytes(randomness_r);
 
     while (secp256k1_ec_seckey_verify(ctx, randomness_r) != 1) {
-        get_random_bytes(randomness_r);
+        random_bytes(randomness_r);
     }
 
     EXPECT(secp256k1_elgamal_encrypt(ctx, &c1, &c2, &pubkey, correct_amount, randomness_r) == 1);
-    get_random_bytes(tx_context_id);
+    random_bytes(tx_context_id);
 
     // 2. Generate the proof for the correct amount
     EXPECT(secp256k1_equality_plaintext_prove(
@@ -128,14 +122,14 @@ static void test_equality_proof_invalid_tampered(const secp256k1_context* ctx) {
 
     // 1. Setup and generate a valid proof
     EXPECT(secp256k1_elgamal_generate_keypair(ctx, privkey, &pubkey) == 1);
-    get_random_bytes(randomness_r);
+    random_bytes(randomness_r);
 
     while (secp256k1_ec_seckey_verify(ctx, randomness_r) != 1) {
-        get_random_bytes(randomness_r);
+        random_bytes(randomness_r);
     }
 
     EXPECT(secp256k1_elgamal_encrypt(ctx, &c1, &c2, &pubkey, amount, randomness_r) == 1);
-    get_random_bytes(tx_context_id);
+    random_bytes(tx_context_id);
     EXPECT(secp256k1_equality_plaintext_prove(
             ctx, proof, &c1, &c2, &pubkey, amount, randomness_r, tx_context_id) == 1);
 
@@ -163,14 +157,14 @@ static void test_equality_proof_zero_amount(const secp256k1_context* ctx) {
 
     // 1. Setup: Generate keys, randomness, and encrypt
     EXPECT(secp256k1_elgamal_generate_keypair(ctx, privkey, &pubkey) == 1);
-    get_random_bytes(randomness_r);
+    random_bytes(randomness_r);
 
     while (secp256k1_ec_seckey_verify(ctx, randomness_r) != 1) {
-        get_random_bytes(randomness_r);
+        random_bytes(randomness_r);
     }
 
     EXPECT(secp256k1_elgamal_encrypt(ctx, &c1, &c2, &pubkey, amount, randomness_r) == 1);
-    get_random_bytes(tx_context_id);
+    random_bytes(tx_context_id);
 
     // 2. Generate the proof for amount 0
     int prove_result = secp256k1_equality_plaintext_prove(
