@@ -1,139 +1,135 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <assert.h>
-#include <openssl/rand.h>
-#include <stdlib.h> // Added for malloc/free
-
+#include <secp256k1.h>
 #include "secp256k1_mpt.h"
+#include "test_utils.h"
 
-/* --- Test Constants --- */
-#define N_RECIPIENTS 3
+int main(void) {
+    secp256k1_context *ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
+    EXPECT(ctx != NULL);
 
-/* --- Helper: Generate Valid Scalar --- */
-static int generate_random_scalar(const secp256k1_context* ctx, unsigned char* scalar) {
-    do {
-        if (RAND_bytes(scalar, 32) != 1) return 0;
-    } while (secp256k1_ec_seckey_verify(ctx, scalar) != 1);
-    return 1;
-}
+    // 1. Context Randomization
+    unsigned char seed[32];
+    random_bytes(seed);
+    EXPECT(secp256k1_context_randomize(ctx, seed));
 
-void run_test_equality_shared_r() {
     printf("=== Running Test: Proof of Equality (Shared Randomness) ===\n");
 
-    /* 1. Setup Context */
-    secp256k1_context* ctx = secp256k1_context_create(SECP256K1_CONTEXT_VERIFY | SECP256K1_CONTEXT_SIGN);
-    unsigned char seed[32];
-    if (RAND_bytes(seed, 32) == 1) {
-        secp256k1_context_randomize(ctx, seed);
-    }
-
-    /* 2. Setup Variables */
-    uint64_t amount = 123456789; // The secret amount
-    unsigned char r_shared[32];  // The shared randomness
-    unsigned char sk[N_RECIPIENTS][32];
-    secp256k1_pubkey Pk[N_RECIPIENTS];
-
-    secp256k1_pubkey C1;               // r * G
-    secp256k1_pubkey C2[N_RECIPIENTS]; // m * G + r * Pk_i
-
-    /* 3. Generate Keys & Shared Randomness */
-    assert(generate_random_scalar(ctx, r_shared));
-
-    // Calculate C1 = r * G
-    assert(secp256k1_ec_pubkey_create(ctx, &C1, r_shared));
-
-    // Prepare Amount Scalar (m * G)
-    unsigned char m_scalar[32] = {0};
-    for (int i = 0; i < 8; i++) m_scalar[31 - i] = (amount >> (i * 8)) & 0xFF;
-
-    secp256k1_pubkey mG;
-    assert(secp256k1_ec_pubkey_create(ctx, &mG, m_scalar));
-
-    /* 4. Encrypt for N recipients */
-    for (int i = 0; i < N_RECIPIENTS; i++) {
-        // Generate Recipient Keypair
-        assert(generate_random_scalar(ctx, sk[i]));
-        assert(secp256k1_ec_pubkey_create(ctx, &Pk[i], sk[i]));
-
-        // Calculate r * Pk_i
-        secp256k1_pubkey rPk = Pk[i];
-        assert(secp256k1_ec_pubkey_tweak_mul(ctx, &rPk, r_shared));
-
-        // Calculate C2_i = m * G + r * Pk_i
-        const secp256k1_pubkey* pts[2] = {&mG, &rPk};
-        assert(secp256k1_ec_pubkey_combine(ctx, &C2[i], pts, 2));
-    }
-
-    /* 5. Generate Proof */
-    // User manually allocates correct size (Correct pattern!)
-    size_t proof_len = secp256k1_mpt_proof_equality_shared_r_size(N_RECIPIENTS);
-    unsigned char* proof = (unsigned char*)malloc(proof_len);
-    unsigned char tx_id[32];
-    RAND_bytes(tx_id, 32);
-
+    const int N_RECIPIENTS = 3;
     printf("Generating proof for %d recipients...\n", N_RECIPIENTS);
 
-    // UPDATED CALL: Removed '&proof_len'
+    // 2. Setup Variables
+    uint64_t amount = 123456789;
+    unsigned char r[32];
+    unsigned char tx_context[32];
+
+    random_scalar(ctx, r);
+    random_scalar(ctx, tx_context);
+
+    // 3. Generate Recipient Keys & Encrypt
+    secp256k1_pubkey pks[3];
+    secp256k1_pubkey C2s[3];
+    secp256k1_pubkey C1;
+
+    // Shared C1 = r*G
+    EXPECT(secp256k1_ec_pubkey_create(ctx, &C1, r));
+
+    for (int i = 0; i < N_RECIPIENTS; i++) {
+        unsigned char sk[32];
+        random_scalar(ctx, sk);
+        EXPECT(secp256k1_ec_pubkey_create(ctx, &pks[i], sk));
+
+        // Construct C2[i] = amount*G + r*PK[i]
+        secp256k1_pubkey mG;
+        unsigned char m_scalar[32] = {0};
+        for(int b=0; b<8; b++) m_scalar[31-b] = (amount >> (b*8)) & 0xFF;
+
+        EXPECT(secp256k1_ec_pubkey_create(ctx, &mG, m_scalar));
+
+        secp256k1_pubkey rPK = pks[i];
+        EXPECT(secp256k1_ec_pubkey_tweak_mul(ctx, &rPK, r));
+
+        const secp256k1_pubkey *summands[2];
+        summands[0] = &mG;
+        summands[1] = &rPK;
+        EXPECT(secp256k1_ec_pubkey_combine(ctx, &C2s[i], summands, 2));
+    }
+
+    // 4. Generate Proof
+    size_t proof_len = secp256k1_mpt_proof_equality_shared_r_size(N_RECIPIENTS);
+    unsigned char proof[proof_len];
+
     int res = secp256k1_mpt_prove_equality_shared_r(
             ctx, proof,
-            amount, r_shared, N_RECIPIENTS,
-            &C1, C2, Pk, tx_id
+            amount,
+            r,
+            N_RECIPIENTS,
+            &C1,
+            C2s,
+            pks,
+            tx_context
     );
-    assert(res == 1);
-    printf("Proof generated. Size: %zu bytes.\n", proof_len);
+    EXPECT(res == 1);
+    printf("Proof generated successfully.\n");
 
-    /* 6. Verify Proof (Positive Case) */
-    printf("Verifying proof (Expecting Success)...\n");
-
-    // UPDATED CALL: Removed 'proof_len'
+    // 5. Verify Proof (Positive Case)
     res = secp256k1_mpt_verify_equality_shared_r(
             ctx, proof,
             N_RECIPIENTS,
-            &C1, C2, Pk, tx_id
+            &C1,
+            C2s,
+            pks,
+            tx_context
     );
-    assert(res == 1);
-    printf("Verified: OK.\n");
+    EXPECT(res == 1);
+    printf("Proof verified successfully.\n");
 
-    /* 7. Negative Test: Tamper with Amount */
-    printf("Verifying proof with wrong ciphertext (Expecting Failure)...\n");
-    secp256k1_pubkey C2_tampered[N_RECIPIENTS];
-    memcpy(C2_tampered, C2, sizeof(C2));
-
-    // Add 1 to the first ciphertext
-    unsigned char one[32] = {0}; one[31] = 1;
-    assert(secp256k1_ec_pubkey_tweak_add(ctx, &C2_tampered[0], one));
-
-    // UPDATED CALL: Removed 'proof_len'
-    res = secp256k1_mpt_verify_equality_shared_r(
-            ctx, proof,
-            N_RECIPIENTS,
-            &C1, C2_tampered, Pk, tx_id
-    );
-    assert(res == 0);
-    printf("Tamper detection: OK.\n");
-
-    /* 8. Negative Test: Tamper with Transaction Context */
+    /* ---------------------------------------------------------------- */
+    /* 6. Negative Test: Tamper with Transaction Context                */
+    /* ---------------------------------------------------------------- */
     printf("Verifying proof with wrong TxID (Expecting Failure)...\n");
-    unsigned char tx_id_fake[32];
-    memcpy(tx_id_fake, tx_id, 32);
-    tx_id_fake[0] ^= 0xFF; // Flip bits
 
-    // UPDATED CALL: Removed 'proof_len'
-    res = secp256k1_mpt_verify_equality_shared_r(
+    unsigned char tx_context_fake[32];
+    memcpy(tx_context_fake, tx_context, 32);
+    tx_context_fake[0] ^= 0xFF; // Corrupt first byte
+
+    int res_fake_ctx = secp256k1_mpt_verify_equality_shared_r(
             ctx, proof,
             N_RECIPIENTS,
-            &C1, C2, Pk, tx_id_fake
+            &C1,
+            C2s,
+            pks,
+            tx_context_fake
     );
-    assert(res == 0);
-    printf("TxID binding check: OK.\n");
+    EXPECT(res_fake_ctx == 0);
+    printf("Tamper detection (Context): OK.\n");
 
-    /* Cleanup */
-    free(proof);
+    /* ---------------------------------------------------------------- */
+    /* 7. Negative Test: Tamper with Ciphertext (C1)                    */
+    /* ---------------------------------------------------------------- */
+    printf("Verifying proof with tampered Ciphertext C1 (Expecting Failure)...\n");
+
+    secp256k1_pubkey C1_fake = C1;
+    // Tweak C1 by adding a small scalar to it, effectively changing the point
+    unsigned char tweak[32] = {0};
+    tweak[31] = 1;
+    EXPECT(secp256k1_ec_pubkey_tweak_add(ctx, &C1_fake, tweak));
+
+    int res_fake_c1 = secp256k1_mpt_verify_equality_shared_r(
+            ctx, proof,
+            N_RECIPIENTS,
+            &C1_fake, // <--- Passing tampered C1
+            C2s,
+            pks,
+            tx_context
+    );
+    EXPECT(res_fake_c1 == 0);
+    printf("Tamper detection (Ciphertext): OK.\n");
+
+    /* ---------------------------------------------------------------- */
+
+    printf("Test passed!\n");
     secp256k1_context_destroy(ctx);
-    printf("=== Test Passed Successfully ===\n");
-}
-
-int main() {
-    run_test_equality_shared_r();
     return 0;
 }

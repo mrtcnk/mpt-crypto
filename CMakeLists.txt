@@ -22,11 +22,20 @@ add_library(mpt-crypto
 target_include_directories(mpt-crypto PUBLIC include)
 
 # --- Set Compile Definitions ---
-target_compile_definitions(mpt-crypto PRIVATE USE_SCALAR_8X32 USE_FIELD_10X26 ECMULT_WINDOW_SIZE=15
-                                              ECMULT_GEN_PREC_BITS=4)
+include(CheckTypeSize)
+# Check if the compiler supports __int128 (required for the optimized 64-bit code)
+check_type_size("__int128" HAVE___INT128)
+
+if (HAVE___INT128)
+    message(STATUS "Build: Detected 128-bit integer support.")
+    target_compile_definitions(mpt-crypto PRIVATE SECP256K1_WIDEMUL_INT128)
+else ()
+    message(STATUS "Build: No 128-bit support detected.")
+    target_compile_definitions(mpt-crypto PRIVATE SECP256K1_WIDEMUL_INT64)
+endif ()
 
 # --- Link Dependencies ---
-target_link_libraries(mpt-crypto PUBLIC secp256k1::secp256k1 PUBLIC OpenSSL::Crypto)
+target_link_libraries(mpt-crypto PUBLIC secp256k1::secp256k1 OpenSSL::Crypto)
 
 # --- Testing ---
 option(ENABLE_TESTS "Enable building tests" ON)
