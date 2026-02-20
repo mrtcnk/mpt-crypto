@@ -1091,6 +1091,7 @@ int secp256k1_bulletproof_create_commitment(
 
     return 1;
 }
+
 /* Helper for a vector 0 */
 static int scalar_vector_all_zero(const unsigned char* scalars, size_t n) {
     unsigned char zero[32] = {0};
