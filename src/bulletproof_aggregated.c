@@ -1091,6 +1091,15 @@ int secp256k1_bulletproof_create_commitment(
 
     return 1;
 }
+/* Helper for a vector 0 */
+static int scalar_vector_all_zero(const unsigned char* scalars, size_t n) {
+    unsigned char zero[32] = {0};
+    for (size_t i = 0; i < n; ++i) {
+        if (memcmp(scalars + 32*i, zero, 32) != 0)
+            return 0; /* found non-zero */
+    }
+    return 1; /* all zero */
+}
 
 /* Helper to calculate commitment terms like A and S */
 static int calculate_commitment_term(
@@ -1113,13 +1122,17 @@ static int calculate_commitment_term(
     if (!secp256k1_ec_pubkey_tweak_mul(ctx, &tB, base_scalar)) return 0;
     pts[n_pts++] = &tB;
 
-    /* 2. <vec_l, G> */
-    if (secp256k1_bulletproof_ipa_msm(ctx, &tG, G_vec, vec_l, n)) {
+   /* 2. <vec_l, G> */
+    if (!scalar_vector_all_zero(vec_l, n)) {
+        if (!secp256k1_bulletproof_ipa_msm(ctx, &tG, G_vec, vec_l, n))
+            return 0; /* REAL FAILURE */
         pts[n_pts++] = &tG;
     }
 
     /* 3. <vec_r, H> */
-    if (secp256k1_bulletproof_ipa_msm(ctx, &tH, H_vec, vec_r, n)) {
+    if (!scalar_vector_all_zero(vec_r, n)) {
+        if (!secp256k1_bulletproof_ipa_msm(ctx, &tH, H_vec, vec_r, n))
+            return 0; /* REAL FAILURE */
         pts[n_pts++] = &tH;
     }
 

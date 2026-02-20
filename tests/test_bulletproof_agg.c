@@ -18,6 +18,7 @@ static inline double elapsed_ms(struct timespec a, struct timespec b) {
 
 /* ---- Core Test Logic ---- */
 void run_test_case(secp256k1_context* ctx, const char* name, uint64_t* values, size_t num_values, int run_benchmarks) {
+    EXPECT(num_values > 0);
     printf("\n[TEST] %s (num_values = %zu)\n", name, num_values);
 
     unsigned char (*blindings)[32] = malloc(num_values * sizeof(*blindings));
