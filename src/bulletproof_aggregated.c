@@ -1136,7 +1136,15 @@ static int calculate_commitment_term(
         pts[n_pts++] = &tH;
     }
 
-    return secp256k1_ec_pubkey_combine(ctx, out, pts, n_pts);
+    if (n_pts == 1) {
+        *out = *pts[0];
+        return 1;
+    }
+
+    if (!secp256k1_ec_pubkey_combine(ctx, out, pts, n_pts))
+        return 0;
+
+    return 1;
 }
 
 /**

@@ -129,7 +129,9 @@ void run_test_case(secp256k1_context* ctx, const char* name, uint64_t* values, s
     EXPECT(secp256k1_bulletproof_create_commitment(
             ctx,
             &bad_commitments[num_values - 1],
-            values[num_values - 1] + 1,
+            (values[num_values - 1] == UINT64_MAX)
+            ? values[num_values - 1] - 1
+            : values[num_values - 1] + 1,
             bad_blinding,
             &pk_base));
 
