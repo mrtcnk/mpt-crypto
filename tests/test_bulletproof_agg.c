@@ -20,9 +20,11 @@ static inline double elapsed_ms(struct timespec a, struct timespec b) {
 void run_test_case(secp256k1_context* ctx, const char* name, uint64_t* values, size_t num_values, int run_benchmarks) {
     printf("\n[TEST] %s (num_values = %zu)\n", name, num_values);
 
-    unsigned char blindings[num_values][32];
-    secp256k1_pubkey commitments[num_values];
+    unsigned char (*blindings)[32] = malloc(num_values * sizeof(*blindings));
+    secp256k1_pubkey* commitments = malloc(num_values * sizeof(*commitments));
     unsigned char context_id[32];
+
+    EXPECT(blindings != NULL && commitments != NULL);
     EXPECT(RAND_bytes(context_id, 32) == 1);
 
     secp256k1_pubkey pk_base;
@@ -115,8 +117,10 @@ void run_test_case(secp256k1_context* ctx, const char* name, uint64_t* values, s
     }
 
     /* ---- Negative Test (Tamper) ---- */
-    secp256k1_pubkey bad_commitments[num_values];
-    memcpy(bad_commitments, commitments, sizeof(commitments));
+    secp256k1_pubkey* bad_commitments = malloc(num_values * sizeof(*bad_commitments));
+    EXPECT(bad_commitments != NULL);
+
+    memcpy(bad_commitments, commitments, sizeof(*commitments) * num_values);
     unsigned char bad_blinding[32];
     random_scalar(ctx, bad_blinding);
 
@@ -145,6 +149,9 @@ void run_test_case(secp256k1_context* ctx, const char* name, uint64_t* values, s
     }
     printf("  PASSED (Rejected invalid proof)\n");
 
+    free(bad_commitments);
+    free(commitments);
+    free(blindings);
     free(G_vec);
     free(H_vec);
 }
