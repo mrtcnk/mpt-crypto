@@ -34,6 +34,14 @@ extern "C" {
  * binary file on disk. On a cache hit the init call returns in milliseconds.
  * Pass NULL to disable caching (table rebuilt on every process start).
  *
+ * The cache format is host-specific: the header and entries are written in
+ * native byte order and depend on struct layout, so a cache file is not
+ * portable across architectures or compilers. On load it is validated (magic,
+ * version, and the l1-derived geometry) and any mismatch fails closed — the
+ * table is simply rebuilt — so a stale or foreign cache is safe, never wrong.
+ * Treat cache files as a per-host build artifact; do not share them between
+ * machines.
+ *
  * @warning Always pass a non-NULL cache_path in any long-running or
  * repeatedly-started application. At default parameters (l1=22) the baby
  * table takes several seconds to build and ~22 MB of memory. Without a

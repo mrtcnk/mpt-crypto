@@ -61,7 +61,18 @@
  * ========================================================================= */
 
 /* Load a secp256k1_pubkey into an affine secp256k1_ge.
- * Mirrors libsecp256k1's internal pubkey_load(). */
+ * Mirrors libsecp256k1's internal pubkey_load().
+ *
+ * The sizeof(secp256k1_ge_storage) == 64 branch memcpy's pk->data directly into
+ * a secp256k1_ge_storage, which assumes secp256k1_pubkey stores a ge_storage in
+ * that layout — true for the pinned secp256k1 0.7.1 recipe. The assertion below
+ * pins that assumption so a future secp bump changing either layout fails to
+ * compile rather than silently corrupting points; the else branch remains a
+ * portable fallback. */
+_Static_assert(sizeof(secp256k1_ge_storage) != 64 ||
+                   sizeof(secp256k1_pubkey) == 64,
+               "secp256k1_pubkey vs ge_storage layout assumption broken "
+               "(see pubkey_to_ge)");
 static void pubkey_to_ge(const secp256k1_pubkey *pk, secp256k1_ge *ge)
 {
   if (sizeof(secp256k1_ge_storage) == 64)
@@ -355,6 +366,13 @@ static void cuckoo_map_free(cuckoo_map *m)
 
 /* =========================================================================
  * Baby table cache file I/O
+ *
+ * The on-disk format is host-endian and struct-layout dependent — the header
+ * fields and each entry_packed are written in native byte order — so cache
+ * files are NOT portable across architectures or compilers. This is
+ * intentional for the local single-machine use case. baby_load validates the
+ * magic, version, and l1-derived section_size; any mismatch fails closed (the
+ * table is rebuilt), so a foreign or corrupt cache never yields a wrong answer.
  * ========================================================================= */
 
 #define BABY_MAGIC 0x4B43554B4F4F4355ULL /* "UCOOKUCK" — cuckoo format v4 */
@@ -409,13 +427,31 @@ static int baby_load(const char *path, int expected_l1, cuckoo_map *baby_out)
     return 0;
   }
 
+  /* Recompute the expected per-section size from l1 so a
+   * corrupt-but-allocatable section_size that is inconsistent with l1 is
+   * rejected, rather than loading a bogus table that causes silent decrypt
+   * misses until the cache is rebuilt (never a wrong answer — verify_candidate
+   * fails closed). Matches the derivation in cuckoo_alloc_build: ceil(1.3n/3) +
+   * 2 with n = Mhalf = 2^(l1-1). s_expected stays 0 for an out-of-range l1,
+   * which the check below rejects (also guarding the shift against a corrupt
+   * header value). */
+  uint64_t s_expected = 0;
+  if (expected_l1 >= 1 && expected_l1 <= 32)
+  {
+    uint64_t n_expected = 1ULL << (expected_l1 - 1);
+    s_expected = (n_expected * 13 + 29) / 30 + 2;
+  }
+
   /* Reject a header whose stash_count is out of range: it is read from an
    * untrusted file and later used as the bound of a loop over the fixed-size
    * stash_xb[CUCKOO_STASH_SZ] / stash_val[CUCKOO_STASH_SZ] arrays, so a value
-   * above CUCKOO_STASH_SZ (or negative) would cause an out-of-bounds read. */
+   * above CUCKOO_STASH_SZ (or negative) would cause an out-of-bounds read.
+   * section_size must equal the value derived from l1 (this subsumes the old
+   * section_size == 0 check). */
   if (hdr.magic != BABY_MAGIC || hdr.version != BABY_VERSION ||
-      (int)hdr.l1 != expected_l1 || hdr.section_size == 0 ||
-      hdr.stash_count < 0 || hdr.stash_count > CUCKOO_STASH_SZ)
+      (int)hdr.l1 != expected_l1 || s_expected == 0 ||
+      hdr.section_size != s_expected || hdr.stash_count < 0 ||
+      hdr.stash_count > CUCKOO_STASH_SZ)
   {
     fclose(f);
     return 0;
@@ -486,6 +522,10 @@ struct secp256k1_elgamal_bsgs_ctx
 static int verify_candidate(const secp256k1_context *ctx, uint64_t m,
                             const unsigned char target33[33])
 {
+  /* Defensive / intentionally redundant: every caller already excludes m == 0
+   * (the m1/m2 candidate checks in bsgs_solve require m in [1, max_m], and the
+   * m == 0 plaintext is handled before the solver runs). Kept as a cheap guard
+   * — m == 0 would make secp256k1_ec_pubkey_create fail regardless. */
   if (m == 0)
     return 0;
 
