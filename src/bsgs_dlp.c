@@ -68,11 +68,19 @@
  * that layout — true for the pinned secp256k1 0.7.1 recipe. The assertion below
  * pins that assumption so a future secp bump changing either layout fails to
  * compile rather than silently corrupting points; the else branch remains a
- * portable fallback. */
+ * portable fallback.
+ *
+ * Gated on a C11 or GNU-compatible compiler: MSVC's C mode does not recognise
+ * the _Static_assert keyword. The pinned secp layout is identical across
+ * platforms, so the clang/gcc CI builds enforce this for every target; MSVC
+ * simply skips the compile-time check. */
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) ||              \
+    defined(__GNUC__)
 _Static_assert(sizeof(secp256k1_ge_storage) != 64 ||
                    sizeof(secp256k1_pubkey) == 64,
                "secp256k1_pubkey vs ge_storage layout assumption broken "
                "(see pubkey_to_ge)");
+#endif
 static void pubkey_to_ge(const secp256k1_pubkey *pk, secp256k1_ge *ge)
 {
   if (sizeof(secp256k1_ge_storage) == 64)
