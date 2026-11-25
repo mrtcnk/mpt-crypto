@@ -44,8 +44,8 @@
  * are available; elsewhere secp256k1_elgamal_decrypt_bsgs_parallel() falls back
  * to the single-threaded solver (see the "Public API - parallel decrypt"
  * section). Define MPT_BSGS_NO_PTHREAD to force that fallback on any platform
- * (used to compile-test the Windows path on POSIX). */
-#if !defined(_WIN32) && !defined(MPT_BSGS_NO_PTHREAD)
+ * (can be used to compile-test the Windows path on POSIX). */
+#if (!defined(_WIN32) || defined(__MINGW32__)) && !defined(MPT_BSGS_NO_PTHREAD)
 #define MPT_BSGS_HAVE_PTHREAD 1
 #endif
 
