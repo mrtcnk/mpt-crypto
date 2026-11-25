@@ -127,6 +127,9 @@ typedef struct secp256k1_elgamal_bsgs_ctx secp256k1_elgamal_bsgs_ctx;
  *                        to skip disk caching. If the file exists and is
  *                        valid it is loaded; otherwise the table is built
  *                        and saved to this path.
+ *                        Cache files use native byte order and C struct
+ *                        layout; treat them as per-host artifacts and
+ *                        regenerate on architecture or compiler changes.
  *
  * @return Pointer to an initialized context, or NULL on failure (OOM,
  *         invalid parameters, or cache I/O error with no fallback).
